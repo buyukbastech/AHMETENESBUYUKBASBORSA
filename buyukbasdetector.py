@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from binance.spot import Spot
+from binance.client import Client
 from sklearn.ensemble import IsolationForest
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Anomali Tespiti (Case 2)", layout="wide")
 
@@ -13,8 +12,8 @@ st.markdown("""
     <p style='text-align:center;'>Binance API üzerinden alınan mum kapanışlarına göre anomali tespiti</p>
 """, unsafe_allow_html=True)
 
-# Binance public client (API anahtarı gerekmez)
-client = Spot()
+# --- Binance public client (API anahtarı gerekmez)
+client = Client()
 
 symbol = st.text_input("📈 Parite giriniz (örn: BTCUSDT, ETHUSDT):", "BTCUSDT")
 interval = st.selectbox("⏱️ Zaman Aralığı Seçiniz:", ["15m", "30m", "1h", "4h", "1d"], index=0)
@@ -22,14 +21,13 @@ days = st.slider("📅 Son kaç günlük veri alınsın?", 10, 90, 60)
 
 if st.button("🚀 Veriyi Al ve Anomali Tespit Et"):
     try:
-        end_time = int(datetime.utcnow().timestamp() * 1000)
-        start_time = int((datetime.utcnow() - timedelta(days=days)).timestamp() * 1000)
-
-        klines = client.klines(symbol=symbol, interval=interval, startTime=start_time, endTime=end_time)
+        # Binance'tan mum verilerini al
+        klines = client.get_historical_klines(symbol, interval, f"{days} day ago UTC")
 
         if not klines or len(klines) == 0:
             st.error("❌ Veri alınamadı. Lütfen pariteyi veya aralığı değiştirin.")
         else:
+            # Veriyi DataFrame'e dönüştür
             df = pd.DataFrame(klines, columns=[
                 'Open time', 'Open', 'High', 'Low', 'Close', 'Volume',
                 'Close time', 'Quote asset volume', 'Number of trades',
